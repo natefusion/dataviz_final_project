@@ -9,4 +9,241 @@ output:
 
 # Data Visualization Project 01
 
-_revised version of mini-project 01 goes here_
+For this report, I am using the dataset with U.S. births data. Each row contains 
+the number of births each day starting from 2000 through 2014. There's a column
+for year, month, date of month, date in the yyyy-mm-dd format, day of week, and
+the number of births.
+
+With these data, I want to tell a story about different US birth patterns across various
+time scales and what causes them. There are many different types of events
+that affect the number of babies born during a particular time period. For example, long
+nationwide events may affect the yearly births, but may be harder to see looking at
+the monthly or daily births. There are also smaller events that just affect
+the specific day that a baby is born. For example, holidays can affect the 
+particular day of the month that a baby is born; there tends to be fewer babies
+born on popular holidays. The day of the week can have the same effect; more babies
+tend to be born on weekdays compared to weekends. In addition, some months are more 
+popular birth months than others.
+
+To do this, I chose to examine three patterns. The first visualization shows the total yearly 
+births from 2000 through 2014. The second visualization shows the average births 
+for each day of the month. The third visualization shows the average births for each
+day of the week across every month.
+
+```{r}
+library(tidyverse)
+library(plotly)
+```
+
+```{r}
+births <- read_csv("../data/us_births_00_14.csv", show_col_types = FALSE)
+```
+
+# Number of births per year
+
+```{r}
+yearly_births <- births |> 
+  group_by(year) |> 
+  summarize(births = sum(births)) |>
+  mutate(tooltip = paste0(
+    "<b>Year:</b> ", year, "<br>",
+    "<b>Total Births:</b> ", scales::comma(births),
+    ifelse(year == 2007, "<br><b>Note:</b> Baby boom peak", "")
+  ))
+
+p1 <- ggplot(yearly_births, aes(year, births)) +
+  geom_line(color = "#1F77B4", group = 1, linewidth = 1) + 
+  geom_point(aes(text = tooltip), color = "#1F77B4", size = 2.5) +
+  # Highlight the 2007 Peak
+  geom_vline(xintercept = 2007, linetype = "dashed", color = "#D32F2F", alpha = 0.7) +
+  annotate("text", x = 2006.8, y = 4300000, label = "2007 Peak\n(4.32M)", hjust = 1, color = "#D32F2F", fontface = "bold", size = 3.5) +
+  scale_x_continuous(breaks = 2000:2014, minor_breaks = NULL) +
+  scale_y_continuous(labels = scales::label_number(scale = 1e-6, suffix = "M"), limits = c(3.8e6, 4.4e6)) +
+  theme_minimal() +
+  labs(title = "Number of births per year", 
+       subtitle = "United States, 2000 to 2014",
+       x = NULL, 
+       y = "Number of births")
+
+ggplotly(p1, tooltip = "text", height = 350, width = 800)
+```
+
+This is a line plot showing the relationship between the year on the x-axis, and
+the number of births on the y-axis. We can see that between 2000 and 2014 there
+was a baby boom peaking in 2007. There were over 200,000 more babies born in 
+2007 compared to 2000. Starting in 2008, the number of births begins to fall off
+linearly, reaching a low of about 4,000,000 in 2011, which holds stable through 2013. 
+This low is over 100,000 less than in 2000. My first thought for the cause was the 
+2008 financial crisis. I think this is a plausible cause considering the start of
+the fall in births began the same year, and began to level off after the worst
+of the effects of the financial crisis had happened.
+
+For the graph, I showed a data point for each year, representing the number of
+births, and connected the points with a line. The line shows the hump 
+peaking in 2007 and the fall off immediately afterwards, demonstrating both
+the baby boom and the financial crisis that followed.
+For the design, I thought about Tufte's data-to-ink ratio and 
+went with a simple grid and omitted the labels for the
+x and y axes, which were redundant for this graph.
+
+Originally, this graph used a trend line to show the "hump" in 2007. I replaced
+it with lines to better represent the data, while still showing the "hump". I
+thought about using a more granular x-axis to show this trend, because the data
+has births for every day. I tried to show the births for every month, hoping it
+would be as smooth as the yearly data, but with more points. Instead the data
+was very messy and the "hump" was hardly visible.
+
+# Average births by date-of-month
+
+```{r}
+dom <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+new_births <- births |>
+  summarize(births = mean(births), .by = c(date_of_month, month)) |>
+  complete(date_of_month = 1:31, month = 1:12) |>
+  mutate(
+    overall_avg = mean(births, na.rm = TRUE),
+    month = factor(month, levels=1:12, labels = dom),
+    pct_diff = (births - overall_avg) / overall_avg * 100,
+    tooltip = ifelse(is.na(births), 
+                     paste0("<b>", month, " ", date_of_month, "</b><br>Non-existent date"),
+                     paste0(
+                       "<b>", month, " ", date_of_month, "</b><br>",
+                       "<b>Average births:</b> ", scales::comma(round(births)), "<br>",
+                       "<b>Relative to Average:</b> ", 
+                       ifelse(round(pct_diff, 1) == 0, "Equal to average", 
+                              paste0(abs(round(pct_diff, 1)), "% ", 
+                                     ifelse(pct_diff > 0, "above", "below"), " average"))
+                     ))
+  )
+(new_births |>
+  ggplot(aes(date_of_month, month, fill = births, text = tooltip)) +
+  geom_tile(color="white") + 
+  scale_x_continuous(breaks=1:31, minor_breaks = NULL) +
+  scale_y_discrete(limits = rev) +
+  scale_fill_viridis_c(labels=scales::label_comma(), na.value = "#EAEAEA") +
+  theme_minimal() +
+  labs(title = "Average births by day of month across every month",
+       subtitle = "United States, 2000 to 2014",
+       fill = "Average births",
+       x = "Day of month",
+       y = NULL)) |> ggplotly(tooltip = "text", height = 320, width = 800)
+```
+This graph shows the relationship for the average number of births for each day
+of the month, across the full 15 year time span. 
+We can see some relative lows on Jan 1st, Jul 4th, and Dec 25th, the last
+week of Nov, Dec 31st, and Oct 31st. All of these are major holidays:
+New Years, Independence Day, Thanksgiving, and Halloween. We can also see some
+relative highs during the summer months, especially September. One particular
+day that stands out to me is Apr 1st. It is noticeably darker than the surrounding
+days, but there is no holiday then. I'm not sure what would have caused it, it's possibly
+related to April Fools' Day but it seems unlikely to me.
+
+For the graph, I used a 2d heatmap plot. The result clearly shows which days of 
+the month have relatively more or fewer births compared to their neighbors and
+correlates well with recognizable holidays, which have a preattentive pop-out 
+that makes them immediately obvious. I chose the viridis theme specifically
+because it is a sequential color scheme that makes it very easy to see slight 
+variations in births compared to other themes. I also applied the data-to-ink
+ratio principle and removed the axis labels, because they are redundant.
+
+This visualization went through some revisions. Initially, I had a bar chart, with
+a bar for every month, with all the days of each month averaged together. That
+graph wasn't very interesting and the small changes were hard to gauge.
+Then, I made a chart that
+averaged together every month and placed the days in a grid made to resemble
+a calendar. I decided to instead use this graph, which shows the holidays
+more clearly. Also, the calendar view might be a misrepresentation because it
+does not show days of the week.
+
+# Average births by day-of-week and month
+```{r}
+dow <- c("Mon", "Tues", "Wed", "Thurs", "Fri", "Sat", "Sun")
+heatmap_data <- births |>
+  mutate(day_of_week = factor(day_of_week, levels=dow),
+         month = factor(month, levels= 1:12, labels=dom)) |>
+  summarize(births = mean(births), .by=c(day_of_week, month)) |>
+  mutate(tooltip = paste0(
+    "<b>Month:</b> ", month, "<br>",
+    "<b>Day of Week:</b> ", day_of_week, "<br>",
+    "<b>Average births:</b> ", scales::comma(round(births))
+  ))
+
+p3_heatmap <- heatmap_data |>
+  ggplot(aes(day_of_week, month, fill = births, text = tooltip)) +
+  geom_tile(color = "white") +
+  scale_fill_viridis_c(labels = scales::label_comma()) +
+  scale_y_discrete(limits = rev) +
+  theme_minimal() +
+  labs(title = "Average births by day-of-week and month",
+       subtitle = "United States, 2000 to 2014",
+       x = NULL,
+       y = NULL,
+       fill = "Average births")
+
+ggplotly(p3_heatmap, tooltip = "text", height = 320, width = 800)
+```
+This graph shows the relationship between the day of the week and the average number
+of births. We can see that there are relatively fewer births on the weekends
+compared to the weekdays across every month. We can also see that September has
+a higher number of births compared to the rest of the months. A particularly
+interesting point is Thursdays in November; there is a small drop compared to
+the surrounding cells. This is probably Thanksgiving, because it is always on
+Thursday.
+
+Like the previous graphs, this is a 2d heatmap. I used gestalt rules to place Saturday
+and Sunday next to each other, which highlights their similarity of relatively low
+births. I believe it makes it more obvious that the cause is the weekend. 
+I also used the sequential viridis color scheme, like the previous graph.
+Also, I applied the data-to-ink ratio principle and removed the axis labels, like the other
+two graphs.
+
+This graph did not have any revisions. I did experiment with placing the weekend
+data in different places, on each end and at the beginning.
+
+```{r}
+line_data <- births |>
+  mutate(day_of_week = factor(day_of_week, levels=dow),
+         month = factor(month, levels=1:12, labels=dom)) |>
+  summarize(births = mean(births), .by=c(day_of_week, month)) |>
+  mutate(dow_avg = mean(births), .by=c(day_of_week)) |>
+  mutate(monthy_avg = mean(births), .by=c(month)) |>
+  mutate(
+    avg_births = mean(births),
+    pct_diff = (births - avg_births) / avg_births * 100,
+    pct_diff_dow = (births - dow_avg) / dow_avg * 100,
+    pct_diff_monthly = (births - monthy_avg) / monthy_avg * 100,
+    tooltip = paste0(
+    "<b>Month:</b> ", month, "<br>",
+    "<b>Day of Week:</b> ", day_of_week, "<br>",
+    "<b>Average births:</b> ", scales::comma(round(births)), "<br>",
+    "<b>Relative to ", day_of_week,":</b> ", 
+     ifelse(round(pct_diff_dow, 1) == 0, "Equal to average", 
+       paste0(abs(round(pct_diff_dow, 1)), "% ", 
+      ifelse(pct_diff_dow > 0, "above", "below"), " average")), "<br>",
+     "<b>Relative to ", month,":</b> ", 
+     ifelse(round(pct_diff_monthly, 1) == 0, "Equal to average", 
+       paste0(abs(round(pct_diff_monthly, 1)), "% ", 
+      ifelse(pct_diff_monthly > 0, "above", "below"), " average"))
+  ))
+
+p3_line <- line_data |>
+  ggplot(aes(x = month, y = births, group = day_of_week, color = day_of_week)) +
+  geom_line(linewidth = 1) +
+  geom_point(aes(text = tooltip), size = 2) +
+  scale_y_continuous(labels = scales::label_comma()) +
+  scale_color_viridis_d() +
+  theme_minimal() +
+  labs(title = "Average births by day-of-week and month",
+       subtitle = "Grouped Line Chart (United States, 2000 to 2014)",
+       x = "Month",
+       y = "Average births",
+       color = "Day of week")
+
+ggplotly(p3_line, tooltip = "text", height = 400, width = 800)
+```
+
+These alternative charts show the same relationship but highlight different patterns. By shifting from a 2D heatmap to grouped bar and line charts, the dramatic drop on weekends (Saturday and Sunday) compared to weekdays is much more visually distinct.
+
+In the grouped line chart particularly, we can see two distinct bands: a lower band of two lines representing weekends (Sat and Sun, hovering around 8,000 births) and an upper band of five lines representing weekdays (hovering around 12,000 births). This visual separation immediately highlights the weekend drop, which is much clearer than comparing colors on a heatmap grid.
+
+In addition, the seasonal trend (with births peaking in late summer/September) is visible across all days of the week, with all lines/bars shifting upward during those months. We can also see a drop in births on Thursdays in November (the line for Thursday dips in November), which is due to Thanksgiving always falling on a Thursday.
