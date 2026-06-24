@@ -1,6 +1,6 @@
 # Data Visualization and Reproducible Research
 
-> Firstname Lastname. 
+> Nathan Piel. 
 
 
 The following is a sample of products created during the _"Data Visualization and Reproducible Research"_ course.
@@ -30,7 +30,7 @@ _[include your favorite visualization from this project here]_
 
 ## Project 03
 
-In this project, I explored ... _[short description of the data visualizations you for this part of the project produced goes here]_
+In this project, I explored ... _[short description of the data visualizations you for made this part of the project produced goes here]_
 
 **Sample data visualization:** 
 
