@@ -30,17 +30,11 @@ weather_tpa <- read_csv("https://raw.githubusercontent.com/aalhamadani/datasets/
 sample_n(weather_tpa, 4)
 ```
 
-See Slides from Week 4 of Visualizing Relationships and Models (slide 10) for a reminder on how to use this type of dataset with the `lubridate` package for dates and times (example included in the slides uses data from 2016).
+### A.
 
-Using the 2022 data: 
-
-(a) Create a plot like the one below:
-
-```{r, echo = FALSE, out.width="80%", fig.align='center'}
+```{r eval=FALSE, fig.align='center', include=FALSE, out.width="80%"}
 knitr::include_graphics("https://raw.githubusercontent.com/aalhamadani/dataviz_final_project/main/figures/tpa_max_temps_facet.png")
 ```
-
-Hint: the option `binwidth = 3` was used with the `geom_histogram()` function.
 
 ```{r, fig.alt='Histograms for each month, with the distribution of maximum temperatures for Tampa, FL in 2022'}
 months <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
@@ -53,34 +47,38 @@ weather_tpa |>
   scale_fill_viridis_c() +
   theme_bw() + 
   labs(
-    x = "Maximum Temperatures",
+    title = "Distribution of maximum temperatures across every month",
+    subtitle = "Tampa, FL 2022",
+    x = "Maximum Temperatures (Fahrenheit)",
     y = "Number of Days"
   )
 ```
 
-(b) Create a plot like the one below:
+### B.
 
-```{r, echo = FALSE, out.width="80%", fig.align='center'}
+```{r eval=FALSE, fig.align='center', include=FALSE, out.width="80%"}
 knitr::include_graphics("https://raw.githubusercontent.com/aalhamadani/dataviz_final_project/main/figures/tpa_max_temps_density.png")
 ```
 
-Hint: check the `kernel` parameter of the `geom_density()` function, and use `bw = 0.5`.
 ```{r, fig.alt='Density plot showing the density of daily maximum temperatures for Tampa in 2022'}
 weather_tpa |>
   ggplot(aes(max_temp)) + 
   geom_density(fill="grey50", bw=0.5, kernel="epanechnikov") +
   labs(
-    x = "Maximum temperature",
-    y = "density"
+    title = "Density of maximum temperatures",
+    subtitle = "Tampa, FL 2022",
+    x = "Maximum temperature (Fahrenheit)",
+    y = "Density"
   ) +
   theme_bw()
 ```
 
-(c) Create a plot like the one below:
+### C.
 
-```{r, echo = FALSE, out.width="80%", fig.align='center'}
+```{r eval=FALSE, fig.align='center', include=FALSE, out.width="80%"}
 knitr::include_graphics("https://raw.githubusercontent.com/aalhamadani/dataviz_final_project/main/figures/tpa_max_temps_density_facet.png")
 ```
+
 ```{r, fig.alt='Density plots for each month, showing the density of daily maximum temperature for Tampa in 2022'}
 weather_tpa |>
   ggplot(aes(max_temp)) +
@@ -96,15 +94,13 @@ weather_tpa |>
 ```
 Hint: default options for `geom_density()` were used. 
 
-(d) Generate a plot like the chart below:
+### D.
 
-
-```{r, echo = FALSE, out.width="80%", fig.align='center'}
+```{r eval=FALSE, fig.align='center', include=FALSE, out.width="80%"}
 knitr::include_graphics("https://raw.githubusercontent.com/aalhamadani/dataviz_final_project/main/figures/tpa_max_temps_ridges_plasma.png")
 ```
 
-Hint: use the`{ggridges}` package, and the `geom_density_ridges()` function paying close attention to the `quantile_lines` and `quantiles` parameters. The plot above uses the `plasma` option (color scale) for the _viridis_ palette.
-```{r, fig.alt='A set of ridgeline plots showing the distribution of daily maximum temperatures for each month'}
+```{r, warning=FALSE, message=FALSE, fig.alt='A set of ridgeline plots showing the distribution of daily maximum temperatures for each month'}
 weather_tpa |>
   group_by(month) |>
   ggplot() +
@@ -119,13 +115,12 @@ weather_tpa |>
   )
 ```
 
-(e) Create a plot of your choice that uses the attribute for precipitation _(values of -99.9 for temperature or -99.99 for precipitation represent missing data)_.
-
-```{r, fig.alt='A bar chart showing the mean precipitation across every month for Tampa in 2022'}
+### E.
+```{r, warning=FALSE, fig.alt='A bar chart showing the mean precipitation across every month for Tampa in 2022'}
 tooltip_text <- function(month_idx, mean_precip, max_precip) {
   paste0(
       "<b>", months[month_idx], "</b><br>",
-      "<b>Mean: </b>", mean_precip, " in<br>",
+      "<b>Mean: </b>", round(mean_precip, 3), " in<br>",
       "<b>Max: </b>", max_precip, " in<br>"
     )
 }
@@ -141,19 +136,20 @@ weather_new <-  weather_new |> mutate(tooltip = tooltip_text(month, mean_precip,
 
 (weather_new |>
   ggplot() +
-  geom_col(aes(factor(month, levels = 1:12, labels = months), mean_precip, text = tooltip)) + 
+  geom_col(aes(factor(month, levels = 1:12, labels = months), mean_precip, text = tooltip), fill = "#1F77B4") + 
   coord_flip() + 
   scale_y_continuous(n.breaks=10) +
+  scale_x_discrete(limits = rev) +
   theme_bw() +
   labs(
-    title = "Mean precipitation in Tampa, 2022",
+    title = "Mean precipitation in Tampa, FL 2022",
     x = NULL,
     y = "Mean precipitation (inches)"
   )
 ) |> ggplotly(tooltip = "tooltip")
 ```
 
-## PART 2 
+## PART 2: Data on Concrete Strength
 Concrete is the most important material in **civil engineering**. The concrete compressive strength is a highly nonlinear function of _age_ and _ingredients_. The dataset used here is from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/index.php), and it contains 1030 observations with 9 different attributes 9 (8 quantitative input variables, and 1 quantitative output variable). A data dictionary is included below: 
 
 
@@ -188,41 +184,114 @@ new_concrete <- concrete %>%
 
 
 
-1. Explore the distribution of 2 of the continuous variables available in the dataset. Do ranges make sense? Comment on your findings.
+### 1. 
+
+Explore the distribution of 2 of the continuous variables available in the dataset. Do ranges make sense? Comment on your findings.
+
 ```{r}
+w_c_stats <- new_concrete |>
+  mutate(water_to_cement = Water / Cement) |>
+  summarize(
+    min = min(water_to_cement),
+    median = median(water_to_cement),
+    max = max(water_to_cement)
+  )
+
 new_concrete |>
+  mutate(water_to_cement = Water / Cement) |>
   ggplot() +
-  geom_histogram(aes(Water))
+  geom_histogram(aes(water_to_cement, after_stat(density)), binwidth=0.05, fill = "#1F77B4") + 
+  scale_x_continuous(breaks = seq(0.2, 1.9, by = 0.1)) +
+  geom_vline(xintercept = c(w_c_stats$min, w_c_stats$median, w_c_stats$max), 
+             color = c("red", "darkgreen", "red"), linetype = "dashed", linewidth = 0.8) +
+  annotate("text", x = w_c_stats$min, y = Inf, label = paste0("Min: ", round(w_c_stats$min, 2)), 
+           vjust = 2, hjust = -0.1, color = "red", fontface = "bold") +
+  annotate("text", x = w_c_stats$median, y = Inf, label = paste0("Median: ", round(w_c_stats$median, 2)), 
+           vjust = 2, hjust = -0.1, color = "darkgreen", fontface = "bold") +
+  annotate("text", x = w_c_stats$max, y = Inf, label = paste0("Max: ", round(w_c_stats$max, 2)), 
+           vjust = 2, hjust = 1.1, color = "red", fontface = "bold") +
+  theme_bw() +
+  labs(
+    title = "Distribution of Water-to-Cement Ratio in Concrete",
+    x = "Water-to-Cement Ratio",
+    y = "Density",
+  )
+
+strength_stats <- new_concrete |>
+  summarize(
+    min = min(Concrete_compressive_strength),
+    median = median(Concrete_compressive_strength),
+    max = max(Concrete_compressive_strength)
+  )
 
 new_concrete |>
   ggplot() +
-  geom_histogram(aes(Concrete_compressive_strength))
+  geom_histogram(aes(Concrete_compressive_strength, after_stat(density)), binwidth=1, fill = "#1F77B4") +
+  scale_x_continuous(breaks = seq(0, 85, by = 5)) +
+  geom_vline(xintercept = c(strength_stats$min, strength_stats$median, strength_stats$max), 
+             color = c("red", "darkgreen", "red"), linetype = "dashed", linewidth = 0.8) +
+  annotate("text", x = strength_stats$min, y = Inf, label = paste0("Min: ", round(strength_stats$min, 1)), 
+           vjust = 2, hjust = -0.1, color = "red", fontface = "bold") +
+  annotate("text", x = strength_stats$median, y = Inf, label = paste0("Median: ", round(strength_stats$median, 1)), 
+           vjust = 2, hjust = -0.1, color = "darkgreen", fontface = "bold") +
+  annotate("text", x = strength_stats$max, y = Inf, label = paste0("Max: ", round(strength_stats$max, 1)), 
+           vjust = 2, hjust = 1.1, color = "red", fontface = "bold") +
+  theme_bw() + 
+  labs(
+    title = "Distribution of Concrete Compressive Strength Values",
+    x = "Concrete Compressive Strength (MPa)",
+    y = "Density",
+  )
 ```
 
-2. Use a _temporal_ indicator such as the one available in the variable `Age` (measured in days). Generate a plot similar to the one shown below. Comment on your results.
+For the distribution of the water-to-cement ratio, the minimum value is 0.27, the maximum is 1.88, and the median is 0.68.
+The median value is skewed to the left; samples in the dataset favor lower water-to-cement ratios.
+This distribution matches typical values for water-to-cement ratio according to Wikipedia, which states values of 0.4 to 0.6.
+The median value of 0.68 is a little higher than what Wikipedia says, but not much. 
+https://en.wikipedia.org/wiki/Water%E2%80%93cement_ratio
 
-```{r, echo = FALSE, out.width="80%", fig.align='center'}
+For the distribution of concrete compressive strength, the minimum is about 2.3MPa and the maximum is about 82.6MPa, with a median of about 34.4MPa.
+The median value is roughly in the middle; samples in the dataset follow a roughly normal distribution of concrete compressive strength values.
+This distribution matches Wikipedia, which states values of 17 to 70. The median of 34.4MPa for this dataset in well within the range of good values.
+https://en.wikipedia.org/wiki/Compressive_strength#Typical_values
+
+### 2. 
+
+```{r eval=FALSE, fig.align='center', include=FALSE, out.width="80%"}
 knitr::include_graphics("https://raw.githubusercontent.com/aalhamadani/dataviz_final_project/main/figures/concrete_strength.png")
 ```
 
 ```{r}
-new_concrete |>
+(new_concrete |>
   filter(!is.na(strength_range)) |>
   ggplot(aes(as.factor(Age), Concrete_compressive_strength, fill = strength_range)) +
   geom_boxplot(orientation = 'x') + 
   theme_minimal() + 
   labs(
+    title = "Distribution of Concrete Compressive Strength Values for Different Ages",
     x = "Age (in Days)",
     y = "Compressive Strength (in MPa)",
     fill = "Strength Range",
-  )
+  )) |> ggplotly()
 ```
+This graph shows a boxplot with the distibutions of compressive strength ranges for each given age in the dataset.
+We can see that at an age of 91, there are only samples in the maximum strength range of (50.5MPa, 82.6MPa]. Samples
+of any other age contain samples in the lower strength ranges. 
+The median value for strength range is highest here as well with a value of 67.95MPa.
+From this graph, it seems that there is an ideal time of about 91 days that concrete should age before use.
 
-3. Create a scatterplot similar to the one shown below. Pay special attention to which variables are being mapped to specific aesthetics of the plot. Comment on your results. 
+I modified this graph by adding interactivity. Now, hovering over a boxplot gives the statistical values for it.
+This enables me to take quantifiable metrics from the graph for analysis. In addition, I made the box plots
+stack on top of each other for each age. Before, the boxplots were jittered around each age, which was confusing.
+It was hard to tell if the jittered box plots had an age of the nearest marking or the interpolated x-axis value.
+In reality, there are only samples at the given age values seen in the graph, so it's clearer to stack them.
 
-```{r, echo = FALSE, out.width="80%", fig.align='center'}
+### 3. 
+
+```{r eval=FALSE, fig.align='center', include=FALSE, out.width="80%"}
 knitr::include_graphics("https://raw.githubusercontent.com/aalhamadani/dataviz_final_project/main/figures/cement_plot.png")
 ```
+
 ```{r}
 new_concrete |>
   ggplot(aes(Cement, Concrete_compressive_strength, size = Age, color = Water)) +
@@ -231,9 +300,27 @@ new_concrete |>
   theme_minimal() + 
   labs(
     title = "Exploring Strength vs (Cement, Age, and Water)",
-    y = "Strength",
+    x = "Cement (kg)",
+    y = "Strength (MPa)",
+    color = "Water (kg)",
+    size = "Age (Days)",
   )
 ```
 
+This graph shows the relationship between cement content and concrete compressive strength.
+In addition, for each data point, it shows the water content and age using color and size.
 
+It appears that, generally, more cement gives a greater strength, but there is a large spread.
 
+Water content is spread out, but it seems that the concrete with the greatest strength has low water content.
+There is a noticeable gradient from turquoise to purple as the strength increases. 
+In addition, there is a small gradient as cement increases, which would make sense.
+We can see the data points with low cement content of around 150kg tend to have a turquoise color 
+and data points with higher cement content of around 300kg tend to have a greenish yellow color.
+For higher cement content, the trend seems to reverse.
+
+Age is spread out as well, but there is a cluster of small data points that seem to be less than 100 days old
+where cement content is low and strength is low. As cement content increases, the age also seems to increase, with
+clusters of larger data points around 300kg of cement content. It also seems that the strongest cement tends to be younger.
+As strength increases the age goes from small to large to small again. This is in line with question 2, which showed that
+there is an ideal age for concrete strength.

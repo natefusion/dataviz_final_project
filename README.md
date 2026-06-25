@@ -31,13 +31,11 @@ _[include your favorite visualization from this project here]_
 
 ## Project 03
 
-In this project, I explored ... _[short description of the data visualizations you for made this part of the project produced goes here]_
+In this project, I explored datasets for weather in Tampa and concrete attributes.
 
 **Sample data visualization:** 
 
-_[include your favorite visualization from this project here]_
-<img src="https://raw.githubusercontent.com/aalhamadani/dataviz_final_project/main/figures/concrete_density.png" width="80%" height="80%">
-
+![](./figures/ccs.png)
 
 ### Moving Forward
 
