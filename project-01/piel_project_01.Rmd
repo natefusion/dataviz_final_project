@@ -83,6 +83,7 @@ the number of births, and adding an axis label. With these changes, the chart
 looks better, is more self-contained, and shows the point of interest of this chart more clearly.
 
 For comparison, this is the original graph:
+
 ```{r echo=FALSE}
 births |> 
   group_by(year) |> 
@@ -224,6 +225,7 @@ makes changes quantifiable. For example, by looking at Thursdays in November, we
 see that the average number of births is 9.3% below average compared to Thursdays in other months but 4.6% above average other days of the week in November.
 
 For comparison, this is the original graph:
+
 ```{r echo=FALSE, fig.alt='A heatmap showing the average number of births in the United States from 2000 to 2014 across each day of the week for each month.'}
 heatmap_data <- births |>
   mutate(day_of_week = factor(day_of_week, levels=dow),
