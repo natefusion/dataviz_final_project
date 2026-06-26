@@ -15,7 +15,7 @@ that quantify the player's performance in the game on a scale of 0 to 100.
 
 With these data, I want to look at comparisons between the overall player rating and
 the various other attributes to show how they affect the overall rating in the game. The overall
-rating is correlated with all 34 attributes including other columns such as nationality, which I
+rating is correlated with of the 34 attributes, which I
 will demonstrate with three visualizations. The first is a map that displays average overall score for each country.
 The second is a scatter plot that fits a linear model to the 34 attributes and compares the result to the overall score.
 The third is a box-and-whisker plot that shows which attributes best predict overall rating.
@@ -46,6 +46,7 @@ fifa_map <- world_shapes |>
   ) |>
   mutate(
     n = replace_na(n, 0),
+    filtered_avg_score = ifelse(n < 20, NA, avg_score),
     hover = paste0(
       "<b>", NAME_LONG, "</b><br>",
       "Total Players: ", n, "<br>",
@@ -55,9 +56,9 @@ fifa_map <- world_shapes |>
 
 fifa_map |>
   plot_geo() |>
-  add_trace(z = ~avg_score, 
+  add_trace(z = ~filtered_avg_score, 
             text = ~hover, 
-            color = ~avg_score, 
+            color = ~filtered_avg_score, 
             colors = 'Purples', 
             locations = ~ISO_A3,
             hoverinfo = "text") |>
@@ -77,17 +78,14 @@ We can see that there are some clusters of high performing areas. In South Ameri
 Brazil, Peru, Venezuela, Paraguay, and Ecuador have a rating of roughly 70. There
 is a small cluster around Northern Africa that includes Algeria, Morocco, Spain,
 and Portugal with a rating of roughly 70 as well. The same pattern can be seen in 
-Eastern Europe with Belarus, Ukraine, Czech Republic, Serbia, Bosnia and Herzegovina, and Croatia.
+Eastern Europe with Ukraine, Czech Republic, Serbia, Bosnia and Herzegovina, and Croatia.
 Other countries such as the United States, the United Kingdom, Germany, Poland, Sweden,
-Finland, Canada, Mexico, Russia, China, and Australia have lower scores of about 65 or less.
-Now, some countries such as the United Kingdom have many players (1920) but has a an
-average score of 63, while other countries such as Belarus has few players (9) but an
-average score of 70. It's possible in some countries it is difficult to become a FIFA-level soccer
-player, so there might be a survivorship bias for countries like Belarus. 
-In the case of the United Kingdom, it's possible that because there are so many, the average decreases.
+Finland, Canada, Mexico, Russia, and Australia have lower scores of about 65 or less.
 
 For the final revision, I switched from the mercator projection to the robinson projection, which
-I believe looks nicer. 
+I believe looks nicer. I decided to remove countries with a small number of players (less than 20) because
+the average from a small sample size is not as reliable and may not be representative of the true average
+rating for that country.
 
 # 2: Predicted vs. Actual Overall Rating
 ```{r, warning=FALSE, fig.alt='Interactive scatter plot comparing predicted overall rating versus actual overall rating for FIFA18 players.'}
@@ -127,7 +125,7 @@ tooltip_text <- function(name, nationality, predicted, overall, residual) {
     "Predicted: ", round(predicted, 1), "<br>",
     "Actual: ", overall, "<br>",
     "Residual: ", round(residual, 2), "<br>",
-    ifelse(predicted > overall, "Overrated", "Underrated")
+    ifelse(predicted > overall, "Prediction overrates compared to actual", "Prediction is underrates compared to actual")
   )
 }
 
@@ -179,7 +177,7 @@ plot_ly() |>
     title = "Predicted vs. Actual Overall Rating for players in FIFA18",
     xaxis = list(title = "Predicted Rating"),
     yaxis = list(title = "Actual Rating"),
-    legend = list(title = list(text = "Rating Status")),
+    legend = list(title = list(text = "Rating Prediction\n(relative to actual rating)")),
     images = list(
       list(
         source = bg_uri,
@@ -215,7 +213,9 @@ curious if there would be any correlation. Just from looking at the outliers, th
 
 For the final revision, I made only the outliers interactive and only selected the top four. Before, plotly would try to render over 17,000 datapoints, which
 was too slow and caused the markdown file to be unviewable. In addition, I added a legend for the rating status and removed 
-the labels from outliers because they were ugly and overlapped the datapoints.
+the labels from outliers because they were ugly and overlapped the datapoints. 
+I also made it more clear that "underrated" and "overrated" are meant to be interpreted as a comparison from the predicted rating to the actual rating, and
+not to mean that the player *is* underrated or overrated.
 
 Here is the original graph for comparison (without interactivity for performance reasons):
 
