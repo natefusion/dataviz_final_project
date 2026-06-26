@@ -15,7 +15,7 @@ that quantify the player's performance in the game on a scale of 0 to 100.
 
 With these data, I want to look at comparisons between the overall player rating and
 the various other attributes to show how they affect the overall rating in the game. The overall
-rating is correlated with of the 34 attributes, which I
+rating is correlated with 34 of the attributes, which I
 will demonstrate with three visualizations. The first is a map that displays average overall score for each country.
 The second is a scatter plot that fits a linear model to the 34 attributes and compares the result to the overall score.
 The third is a box-and-whisker plot that shows which attributes best predict overall rating.
