@@ -9,4 +9,306 @@ output:
 
 # Data Visualization Project 02
 
-_revised version of mini-project 02 goes here_
+For this project, I am using the FIFA18 dataset. It is sourced from the FIFA18 EA Sports video game.
+Each row contains information about a player including name, nationality, club, age, and 34 attributes
+that quantify the player's performance in the game on a scale of 0 to 100.
+
+With these data, I want to look at comparisons between the overall player rating and
+the various other attributes to show how they affect the overall rating in the game. The overall
+rating is correlated with all 34 attributes including other columns such as nationality, which I
+will demonstrate with three visualizations. The first is a map that displays average overall score for each country.
+The second is a scatter plot that fits a linear model to the 34 attributes and compares the result to the overall score.
+The third is a box-and-whisker plot that shows which attributes best predict overall rating.
+
+```{r, message=FALSE}
+library(plotly)
+library(tidyverse)
+library(sf)
+library(htmlwidgets)
+library(htmltools)
+library(ggrepel)
+library(ggtext)
+library(broom)
+```
+
+```{r}
+fifa <- read_csv("../data/fifa18.csv", show_col_types = FALSE)
+world_shapes <- read_sf("../data/ne_110m_admin_0_countries/ne_110m_admin_0_countries.shp")|>
+    filter(ISO_A3 != "ATA")
+```
+
+# 1: Average Overall Rating by Country
+```{r, warning=FALSE}
+fifa_map <- world_shapes |>
+  left_join(
+    fifa |> summarize(n = n(), avg_score = mean(overall), .by = c(nationality)),
+    by = join_by(NAME_LONG == nationality)
+  ) |>
+  mutate(
+    n = replace_na(n, 0),
+    hover = paste0(
+      "<b>", NAME_LONG, "</b><br>",
+      "Total Players: ", n, "<br>",
+      "Average Rating: ", if_else(n > 0, as.character(round(avg_score, 1)), "N/A")
+    )
+  )
+
+fifa_map |>
+  plot_geo() |>
+  add_trace(z = ~avg_score, 
+            text = ~hover, 
+            color = ~avg_score, 
+            colors = 'Purples', 
+            locations = ~ISO_A3,
+            hoverinfo = "text") |>
+  colorbar(title = "Average Player Rating") |>
+  layout(title = "Average FIFA18 player rating by country",
+         geo = list(showframe = TRUE, 
+                    showcoastlines = TRUE, 
+                    projection = list(type = 'robinson')))
+```
+
+This is an interactive map showing the average overall player rating for each country.
+It shows countries with more players with a dark purple and countries with no
+players as white. When hovering over a country it shows the precise average overall score,
+the country name, and the number of players from that country.
+
+We can see that there are some clusters of high performing areas. In South America
+Brazil, Peru, Venezuela, Paraguay, and Ecuador have a rating of roughly 70. There
+is a small cluster around Northern Africa that includes Algeria, Morocco, Spain,
+and Portugal with a rating of roughly 70 as well. The same pattern can be seen in 
+Eastern Europe with Belarus, Ukraine, Czech Republic, Serbia, Bosnia and Herzegovina, and Croatia.
+Other countries such as the United States, the United Kingdom, Germany, Poland, Sweden,
+Finland, Canada, Mexico, Russia, China, and Australia have lower scores of about 65 or less.
+Now, some countries such as the United Kingdom have many players (1920) but has a an
+average score of 63, while other countries such as Belarus has few players (9) but an
+average score of 70. It's possible in some countries it is difficult to become a FIFA-level soccer
+player, so there might be a survivorship bias for countries like Belarus. 
+In the case of the United Kingdom, it's possible that because there are so many, the average decreases.
+
+For the final revision, I switched from the mercator projection to the robinson projection, which
+I believe looks nicer. 
+
+# 2: Predicted vs. Actual Overall Rating
+```{r, warning=FALSE}
+all_attrs <- c(
+  "acceleration", "aggression", "agility", "balance", "ball_control",
+  "composure", "crossing", "curve", "dribbling", "finishing",
+  "free_kick_accuracy", "gk_diving", "gk_handling", "gk_kicking",
+  "gk_positioning", "gk_reflexes", "heading_accuracy", "interceptions",
+  "jumping", "long_passing", "long_shots", "marking", "penalties",
+  "positioning", "reactions", "short_passing", "shot_power",
+  "sliding_tackle", "sprint_speed", "stamina", "standing_tackle",
+  "strength", "vision", "volleys"
+)
+
+model_data <- fifa |>
+  select(name, nationality, overall, all_of(all_attrs)) |>
+  drop_na()
+
+fit <- lm(overall ~ ., data = model_data |> select(-name, -nationality))
+
+model_data <- model_data |>
+  mutate(
+    predicted = fitted(fit),
+    residual  = residuals(fit)
+  )
+
+to_label <- bind_rows(
+  model_data |> slice_max(residual, n = 4),
+  model_data |> slice_min(residual, n = 4)
+)
+
+tooltip_text <- function(name, nationality, predicted, overall, residual) {
+  paste0(
+    "<b>", name, "</b><br>",
+    nationality, '<br>',
+    "Predicted: ", round(predicted, 1), "<br>",
+    "Actual: ", overall, "<br>",
+    "Residual: ", round(residual, 2), "<br>",
+    ifelse(predicted > overall, "Overrated", "Underrated")
+  )
+}
+
+model_data <- model_data |>
+  mutate(tooltip = tooltip_text(name, nationality, predicted, overall, residual))
+
+to_label <- to_label |>
+  mutate(tooltip = tooltip_text(name, nationality, predicted, overall, residual))
+
+(ggplot(model_data, aes(x = predicted, y = overall)) +
+  geom_point(aes(color = residual, text = tooltip), alpha = 0.3, size = 0.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  geom_point(data = to_label, aes(color = residual, text = tooltip), size = 3) +
+  geom_text(data = to_label, aes(label = name), size = 2.5, vjust = -0.8) +
+  scale_color_gradient2(
+    low = "steelblue", mid = "grey85", high = "tomato",
+    midpoint = 0, name = "Residual"
+  ) +
+  labs(
+    title = "Predicted vs. Actual Overall Rating for players in FIFA18",
+    x = "Predicted Rating",
+    y = "Actual Rating"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")) |> ggplotly(tooltip = "text")
+```
+
+This interactive scatter plot compares a predicted overall rating vs the actual overall rating.
+To calculate the predicted overall rating, I fit a linear model using the actual overall
+with the other 34 attributes. It shows players where the actual overall rating was greater than
+the predicted in red, and the opposite in blue. The players with a predicted value less than
+the actual value are marked as "underrated" and "overrated" for the opposite condition. The
+plot shows labels for the top 8 most overrated and underrated players. When hovering, there is
+a tooltip with the player's name, nationality, predicted value, actual value, residual value, along with the underrated/overrated label.
+
+We can see that the predicted rating correlates well with the true rating. Near the top
+end of the range, the prediction tends to underrate, leaving almost no overrated players once
+the actual rating reach roughly 85. There are some surprising outliers. Some deviate from the actual rating by
+over 10 points. This is unexpected, I thought originally that there would be a much tighter spread. I'm not
+sure what methods were used to calculate the overall value. I added in the countries to the tooltip because I was
+curious if there would be any correlation. Just from looking at the outliers, there does not seem to be anything obvious.
+
+I made no changes for the final revision.
+
+# 3: Coefficient Plot
+```{r}
+coef_data <- tidy(fit, conf.int = TRUE) |>
+  filter(term != "(Intercept)") |>
+  mutate(
+    clean_term = str_replace_all(term, "_", " ") |> str_to_title(),
+    category = case_when(
+      str_detect(term, "^gk_") ~ "Goalkeeping",
+      term %in% c("acceleration", "agility", "balance", "reactions", "sprint_speed", "stamina", "jumping", "strength") ~ "Physical / Athletic",
+      term %in% c("aggression", "interceptions", "marking", "sliding_tackle", "standing_tackle", "heading_accuracy") ~ "Defending",
+      term %in% c("ball_control", "crossing", "curve", "long_passing", "short_passing", "vision") ~ "Passing & Control",
+      TRUE ~ "Attacking & Shooting"
+    ),
+    tooltip = paste0(
+      "<b>", clean_term, "</b> (", category, ")<br>",
+      "Correlates with ", ifelse(estimate > 0, "better", "worse"), " performance<br>",
+      "Estimate: ", round(estimate, 3), "<br>",
+      "p-value: ", format.pval(p.value, digits = 2), ifelse(p.value < 0.05, " (High Confidence)", " (Low Confidence)")
+    )
+  ) |>
+  arrange(category, estimate) |>
+  mutate(term = fct_inorder(clean_term))
+
+plot_ly(
+  coef_data,
+  type = "scatter",
+  mode = "markers",
+  height = 900,
+  x = ~estimate,
+  y = ~term,
+  color = ~category,
+  colors = c(
+    "Goalkeeping" = "#1f77b4",
+    "Physical / Athletic" = "#ff7f0e",
+    "Defending" = "#2ca02c",
+    "Passing & Control" = "#9467bd",
+    "Attacking & Shooting" = "#d62728"
+  ),
+  text = ~tooltip,
+  hoverinfo = "text",
+  error_x = list(
+    type = "data",
+    symmetric = FALSE,
+    array = ~(conf.high - estimate),
+    arrayminus = ~(estimate - conf.low),
+    color = "gray60",
+    thickness = 1.5,
+    width = 4
+  ),
+  marker = list(size = 8)
+) |>
+  layout(
+    title = "Which attributes best predict Overall Rating for players in FIFA18?",
+    xaxis = list(title = "Coefficient Estimate", zeroline = TRUE),
+    yaxis = list(title = "", dtick = 1),
+    shapes = list(list(
+      type = "line", x0 = 0, x1 = 0, y0 = 0, y1 = 1,
+      yref = "paper", line = list(color = "grey", dash = "dash")
+    )),
+    legend = list(title = list(text = "Attribute Category"))
+  )
+```
+
+This visualization shows the correlation between the player's attributes and the player's overall rating.
+Positive coefficients mean the attribute is correlated with better overall performance, 
+and a negative attribute means the coefficient is correlated with worse overall performance.
+Hovering over a datapoint shows the category, effect on overall rating, coefficient estimate, and p-value.
+
+Looking at the attributes by themselves, we can see that the attribute that best predicts a good overall rating is "Reactions" with a value of 0.291
+and the attribute that best predicts a bad overall rating is "positioning" with a value of -0.054.
+Most of the attributes are correlated positively with overall score. There were only 7 that were negatively correlated, compared to the 27 positively correlated attributes.
+The "reactions" attribute is a large outlier that correlates almost 2 times as much as the next most positive attribute, "Ball Control".
+Now, It makes sense that these are positive, because those attributes are two important skills that are needed in soccer.
+I'm unsure why there are any attributes that negatively correlate, even a little bit. For example, the "positioning" attribute has
+a near zero p-value, but why would positioning by negatively correlated?
+
+Looking at the attribute categories, we can see a general "S-pattern" for each. 
+There tends to be outliers for both relatively low and high coefficient values with a several more 
+having a similar effect on rating for each category, creating an "S" shape.
+
+For the final revision, I made several changes. First, I created categories to
+group each attribute by, colored each datapoint based on category, and sorted each datapoint
+by category, then estimate. The previous graph colored the datapoints by the sign of the coefficient.
+I think it is more useful to color the datapoints by category because the positive/negative correlation is still clear with the vertical line.
+With this information, we can see how the category of each attribute correlates with overall rating,
+however, the categories are arbitrary and might not represent a perfect grouping.
+I also changed the height of the graph to accommodate every attribute, so now there are no hidden attributes
+revealed by zooming in or scrolling. 
+For the last changes, I tweaked the tooltip information by omitting the confidence interval, added a line
+that plainly states how the attributes correlates with rating, and added a confidence note for the p-value.
+
+Here is the original graph for comparison:
+
+```{r, echo=FALSE}
+coef_data <- tidy(fit, conf.int = TRUE) |>
+  filter(term != "(Intercept)") |>
+  mutate(
+    term      = str_replace_all(term, "_", " ") |> str_to_title(),
+    direction = if_else(estimate > 0, "Positive", "Negative"),
+    tooltip   = paste0(
+      "<b>", term, "</b><br>",
+      "Estimate: ", round(estimate, 3), "<br>",
+      "95% CI: [", round(conf.low, 3), ", ", round(conf.high, 3), "]<br>",
+      "p-value: ", signif(p.value, 3)
+    )
+  ) |>
+  arrange(estimate) |>
+  mutate(term = fct_inorder(term))
+
+plot_ly(
+  coef_data,
+  type = "scatter",
+  mode = "markers",
+  x = ~estimate,
+  y = ~term,
+  color = ~direction,
+  colors = c("Negative" = "steelblue", "Positive" = "tomato"),
+  text = ~tooltip,
+  hoverinfo = "text",
+  error_x = list(
+    type = "data",
+    symmetric = FALSE,
+    array = ~(conf.high - estimate),
+    arrayminus = ~(estimate - conf.low),
+    color = "gray60",
+    thickness = 1.5,
+    width = 4
+  ),
+  marker = list(size = 8)
+) |>
+  layout(
+    title = "Which attributes best predict Overall Rating for players in FIFA18?",
+    xaxis = list(title = "Coefficient Estimate", zeroline = TRUE),
+    yaxis = list(title = ""),
+    shapes = list(list(
+      type = "line", x0 = 0, x1 = 0, y0 = 0, y1 = 1,
+      yref = "paper", line = list(color = "grey", dash = "dash")
+    )),
+    legend = list(title = list(text = "Direction"))
+  )
+```
