@@ -111,7 +111,8 @@ fit <- lm(overall ~ ., data = model_data |> select(-name, -nationality))
 model_data <- model_data |>
   mutate(
     predicted = fitted(fit),
-    residual  = residuals(fit)
+    residual  = residuals(fit),
+    status    = if_else(predicted > overall, "Overrated", "Underrated")
   )
 
 to_label <- bind_rows(
@@ -136,22 +137,65 @@ model_data <- model_data |>
 to_label <- to_label |>
   mutate(tooltip = tooltip_text(name, nationality, predicted, overall, residual))
 
-(ggplot(model_data, aes(x = predicted, y = overall)) +
-  geom_point(aes(color = residual, text = tooltip), alpha = 0.3, size = 0.8) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
-  geom_point(data = to_label, aes(color = residual, text = tooltip), size = 3) +
-  geom_text(data = to_label, aes(label = name), size = 2.5, vjust = -0.8) +
+min_x <- min(model_data$predicted)
+max_x <- max(model_data$predicted)
+min_y <- min(model_data$overall)
+max_y <- max(model_data$overall)
+
+bg_plot <- model_data |> ggplot(aes(x = predicted, y = overall)) +
+  geom_point(aes(color = residual), alpha = 0.3, size = 0.8, show.legend = FALSE) +
   scale_color_gradient2(
-    low = "steelblue", mid = "grey85", high = "tomato",
+    low = "steelblue", mid = "gray85", high = "tomato",
     midpoint = 0, name = "Residual"
   ) +
-  labs(
+  theme_void()
+
+bg_png_path <- tempfile(fileext = ".png")
+ggsave(bg_png_path, plot = bg_plot, width = 8, height = 6, dpi = 300, bg = "transparent")
+bg_uri <- base64enc::dataURI(file = bg_png_path, mime = "image/png")
+unlink(bg_png_path)
+
+plot_ly() |>
+  add_segments(
+    x = min_x, xend = max_x, y = min_x, yend = max_x,
+    line = list(dash = "dash", color = "black", width = 1),
+    showlegend = FALSE
+  ) |>
+  add_trace(
+    data = to_label |> filter(status == "Overrated"),
+    x = ~predicted, y = ~overall,
+    type = "scatter", mode = "markers", name = "Overrated", text = ~tooltip,
+    marker = list(size = 10, color = "steelblue", line = list(color = "black", width = 1)),
+    hoverinfo = "text", showlegend = TRUE
+  ) |>
+  add_trace(
+    data = to_label |> filter(status == "Underrated"),
+    x = ~predicted, y = ~overall,
+    type = "scatter", mode = "markers", name = "Underrated", text = ~tooltip,
+    marker = list(size = 10, color = "tomato",line = list(color = "black", width = 1)),
+    hoverinfo = "text", showlegend = TRUE
+  ) |>
+  layout(
     title = "Predicted vs. Actual Overall Rating for players in FIFA18",
-    x = "Predicted Rating",
-    y = "Actual Rating"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "none")) |> ggplotly(tooltip = "text")
+    xaxis = list(title = "Predicted Rating"),
+    yaxis = list(title = "Actual Rating"),
+    legend = list(title = list(text = "Rating Status")),
+    images = list(
+      list(
+        source = bg_uri,
+        xref = "x",
+        yref = "y",
+        x = min_x,
+        y = max_y,
+        sizex = max_x - min_x,
+        sizey = max_y - min_y,
+        sizing = "stretch",
+        xanchor = "left",
+        yanchor = "top",
+        layer = "below"
+      )
+    )
+  )
 ```
 
 This interactive scatter plot compares a predicted overall rating vs the actual overall rating.
@@ -159,7 +203,7 @@ To calculate the predicted overall rating, I fit a linear model using the actual
 with the other 34 attributes. It shows players where the actual overall rating was greater than
 the predicted in red, and the opposite in blue. The players with a predicted value less than
 the actual value are marked as "underrated" and "overrated" for the opposite condition. The
-plot shows labels for the top 8 most overrated and underrated players. When hovering, there is
+plot shows labels for the top 4 most overrated and underrated players. When hovering, there is
 a tooltip with the player's name, nationality, predicted value, actual value, residual value, along with the underrated/overrated label.
 
 We can see that the predicted rating correlates well with the true rating. Near the top
@@ -169,7 +213,13 @@ over 10 points. This is unexpected, I thought originally that there would be a m
 sure what methods were used to calculate the overall value. I added in the countries to the tooltip because I was
 curious if there would be any correlation. Just from looking at the outliers, there does not seem to be anything obvious.
 
-I made no changes for the final revision.
+For the final revision, I made only the outliers interactive and only selected the top four. Before, plotly would try to render over 17,000 datapoints, which
+was too slow and caused the markdown file to be unviewable. In addition, I added a legend for the rating status and removed 
+the labels from outliers because they were ugly and overlapped the datapoints.
+
+Here is the original graph for comparison (without interactivity for performance reasons):
+
+![](../figures/ugleh_rating.png)
 
 # 3: Coefficient Plot
 ```{r}
