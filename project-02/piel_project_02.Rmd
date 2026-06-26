@@ -38,7 +38,7 @@ world_shapes <- read_sf("../data/ne_110m_admin_0_countries/ne_110m_admin_0_count
 ```
 
 # 1: Average Overall Rating by Country
-```{r, warning=FALSE}
+```{r, warning=FALSE, fig.alt='Interactive world map showing average FIFA18 player rating by country.'}
 fifa_map <- world_shapes |>
   left_join(
     fifa |> summarize(n = n(), avg_score = mean(overall), .by = c(nationality)),
@@ -90,7 +90,7 @@ For the final revision, I switched from the mercator projection to the robinson 
 I believe looks nicer. 
 
 # 2: Predicted vs. Actual Overall Rating
-```{r, warning=FALSE}
+```{r, warning=FALSE, fig.alt='Interactive scatter plot comparing predicted overall rating versus actual overall rating for FIFA18 players.'}
 all_attrs <- c(
   "acceleration", "aggression", "agility", "balance", "ball_control",
   "composure", "crossing", "curve", "dribbling", "finishing",
@@ -222,7 +222,7 @@ Here is the original graph for comparison (without interactivity for performance
 ![](../figures/ugleh_rating.png)
 
 # 3: Coefficient Plot
-```{r}
+```{r, fig.alt='Coefficient plot of attribute estimates for predicting overall FIFA18 rating, grouped by attribute category.'}
 coef_data <- tidy(fit, conf.int = TRUE) |>
   filter(term != "(Intercept)") |>
   mutate(
@@ -314,7 +314,7 @@ that plainly states how the attributes correlates with rating, and added a confi
 
 Here is the original graph for comparison:
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.alt='Original coefficient plot of attribute estimates for predicting overall FIFA18 rating, colored by positive or negative direction.'}
 coef_data <- tidy(fit, conf.int = TRUE) |>
   filter(term != "(Intercept)") |>
   mutate(

@@ -84,7 +84,7 @@ looks better, is more self-contained, and shows the point of interest of this ch
 
 For comparison, this is the original graph:
 
-```{r echo=FALSE}
+```{r echo=FALSE, fig.alt='Line chart showing the total number of births per year in the United States from 2000 to 2014 (original layout)'}
 births |> 
   group_by(year) |> 
   summarize(births = sum(births)) |> 

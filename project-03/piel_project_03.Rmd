@@ -188,7 +188,7 @@ new_concrete <- concrete %>%
 
 Explore the distribution of 2 of the continuous variables available in the dataset. Do ranges make sense? Comment on your findings.
 
-```{r}
+```{r, fig.alt='Two histograms showing the distributions of Water-to-Cement Ratio and Concrete Compressive Strength values.'}
 w_c_stats <- new_concrete |>
   mutate(water_to_cement = Water / Cement) |>
   summarize(
@@ -261,7 +261,7 @@ https://en.wikipedia.org/wiki/Compressive_strength#Typical_values
 knitr::include_graphics("https://raw.githubusercontent.com/aalhamadani/dataviz_final_project/main/figures/concrete_strength.png")
 ```
 
-```{r}
+```{r, fig.alt='Boxplots showing the distribution of concrete compressive strength for different concrete ages in days.'}
 (new_concrete |>
   filter(!is.na(strength_range)) |>
   ggplot(aes(as.factor(Age), Concrete_compressive_strength, fill = strength_range)) +
@@ -292,7 +292,7 @@ In reality, there are only samples at the given age values seen in the graph, so
 knitr::include_graphics("https://raw.githubusercontent.com/aalhamadani/dataviz_final_project/main/figures/cement_plot.png")
 ```
 
-```{r}
+```{r, fig.alt='Scatter plot of Concrete Compressive Strength vs Cement content, colored by Water content, with point size representing concrete Age.'}
 new_concrete |>
   ggplot(aes(Cement, Concrete_compressive_strength, size = Age, color = Water)) +
   geom_point(alpha = 0.5) + 
